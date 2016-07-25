@@ -1,0 +1,10 @@
+#
+# requirements.txt for ansible-role-apply tests
+#
+pytest
+coverage==3.7.1
+pytest-cov
+pytest-xdist
+mock
+unittest2
+vulture

@@ -60,3 +60,4 @@ target/
 .vagrant
 .DS_Store
 .vagrant.d
+venv*/*
