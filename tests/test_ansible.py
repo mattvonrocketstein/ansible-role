@@ -8,10 +8,11 @@ import pytest
 from fabric import api
 
 
-def test_basic():
-    assert 1 == 1
-
-
-def test_cli():
+def test_help():
     with api.settings(warn_only=True):
         assert api.local("ansible-role-apply --help").succeeded
+
+
+def test_simple_invocation_with_failure():
+    with api.settings(warn_only=True):
+        assert api.local("ansible-role-apply role.doesnotexist").failed

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-    The missing ansible-role command, applying a single role without
+    The missing "ansible-role" command, applying a single role without
     editing a playbook.
 """
 import os
@@ -34,38 +34,51 @@ def get_parser():
     return parser
 
 
-def entry(settings=None):
+def get_or_create_role_dir(module_path):
+    role_dir = os.path.join(module_path, 'roles')
+    if not os.path.exists(role_dir):
+        msg = "ansible role-dir does not exist at '{0}', creating it"
+        report(msg.format(role_dir))
+        api.local('mkdir -p "{0}"'.format(role_dir))
+    return role_dir
+
+
+def entry():
     """ Main entry point """
     report('version {0}'.format(__version__))
     parser = get_parser()
     prog_args, extra_ansible_args = parser.parse_known_args(sys.argv[1:])
     role_name = prog_args.rolename.pop()
     module_path = prog_args.module_path
-    temporary = False
+    do_work(role_name, module_path, extra_ansible_args)
+
+
+def escape_args(extra_ansible_args):
+    """ """
+    return [
+        shellescape.quote(x) if ' ' in x else x
+        for x in extra_ansible_args
+    ]
+
+
+def do_work(role_name, module_path, extra_ansible_args):
+    module_path_created = False
     if not module_path:
         module_path = tempfile.mkdtemp()
-        temporary = True
+        module_path_created = True
         report("ansible module-path not given, using {0}".format(module_path))
     else:
         extra_ansible_args += ['--module-path', module_path]
-    extra_ansible_args = [
-        shellescape.quote(x) if ' ' in x else x
-        for x in extra_ansible_args]
-    # raise Exception, extra_ansible_args
-    role_dir = os.path.join(module_path, 'roles')
-    if not os.path.exists(role_dir):
-        msg = "ansible role-dir does not exist at '{0}', creating it"
-        report(msg.format(role_dir))
-        api.local('mkdir -p "{0}"'.format(role_dir))
+    extra_ansible_args = escape_args(extra_ansible_args)
+    role_dir = get_or_create_role_dir(module_path)
     try:
-        success = util._ansible.apply_ansible_role(
+        success = util.apply_ansible_role(
             role_name, role_dir,
             ansible_args=extra_ansible_args,
             report=report)
-        if not success and temporary:
+        if not success and module_path_created:
             report("next time pass --module-path if you "
                    "want to avoid redownloading the role")
     finally:
-        if temporary:
+        if module_path_created:
             shutil.rmtree(module_path)
-    print prog_args, extra_ansible_args
