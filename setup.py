@@ -32,7 +32,7 @@ setup(
     keywords=['ansible', 'devops'],
     entry_points={
         'console_scripts':
-        ['ansible-role-apply = ansible_role_apply.bin:entry', ]},
+        ['ansible-role-apply = ansible_role_apply:entry', ]},
     install_requires=[
         'shellescape==3.4.1',
         "Fabric",

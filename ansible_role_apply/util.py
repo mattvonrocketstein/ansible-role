@@ -5,13 +5,12 @@ import os
 import json
 from tempfile import NamedTemporaryFile
 
+import jinja2
 from fabric import api
+from fabric.colors import red, cyan
 
 from .base import report as base_report, eprint
 
-
-from fabric.colors import red, cyan
-import jinja2
 jinja_env = jinja2.Environment(undefined=jinja2.StrictUndefined)
 
 FAIL = FAILURE = red('✖ ')
@@ -30,17 +29,17 @@ PLAYBOOK_CONTENT = '\n'.join([
 def require_ansible_role(role_name, role_dir, report=base_report):
     """ """
     if role_name not in os.listdir(role_dir):
-        report(FAIL +
-               "role '{0}' not found in {1}".format(role_name, role_dir))
-        result = api.local('ansible-galaxy install -p {role_dir} {role_name}'.format(
-            role_dir=role_dir, role_name=role_name))
+        galaxy_cmd = 'ansible-galaxy install -p {role_dir} {role_name}'
+        msg = "role '{0}' not found in {1}"
+        report(FAIL + msg.format(role_name, role_dir))
+        cmd = galaxy_cmd.format(role_dir=role_dir, role_name=role_name)
+        result = api.local(cmd)
         if not result.succeeded:
-            err = "missing role {0} could not be installed".format(
-                role_name)
-            raise RuntimeError(err)
-    report(
-        SUCCESS +
-        "ansible role '{0}' installed to '{1}'".format(role_name, role_dir))
+            err = "missing role {0} could not be installed"
+            raise RuntimeError(err.format(role_name))
+    msg = "ansible role '{0}' installed to '{1}'"
+    msg = msg.format(role_name, role_dir)
+    report(SUCCESS + msg)
 
 
 def get_playbook_for_role(role_name, role_dir, report=base_report, **env):
@@ -57,19 +56,19 @@ def get_playbook_for_role(role_name, role_dir, report=base_report, **env):
     """
     env = env.copy()
     env_string = ''
+    err = (
+        "ansible-role apply only supports passing "
+        "simple environment variables (strings or bools). "
+        "Found type '{0}' at name '{1}'")
     for k, v in env.items():
         if isinstance(v, (bool, basestring, list)):
             v = json.dumps(v)
         else:
-            err = ("ansible-role apply only supports passing "
-                   "simple environment variables (strings or bools). "
-                   "Found type '{0}' at name '{1}'")
             raise SystemExit(err.format(type(v), k))
         env_string += ', ' + ': '.join([k, v])
     ctx = dict(
         env=env_string,
-        role_path=os.path.join(role_dir, role_name),
-    )
+        role_path=os.path.join(role_dir, role_name),)
     playbook_content = jinja_env.from_string(
         PLAYBOOK_CONTENT).render(**ctx)
     return playbook_content
