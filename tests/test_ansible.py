@@ -10,7 +10,7 @@ from fabric import api
 from argparse import ArgumentParser
 
 from .backports import TemporaryDirectory
-from ansible_role_apply import (
+from ansible_role import (
     role_apply, entry, report, get_parser,
     require_ansible_role,)
 
@@ -31,7 +31,7 @@ def test_require_ansible_role_good_val():
         fake.assert_called_with(cmd)
 
 
-@mock.patch("ansible_role_apply.apply_ansible_role")
+@mock.patch("ansible_role.apply_ansible_role")
 def test_help(aar):
     success, exit_code = True, 0
     aar.return_value = success, exit_code

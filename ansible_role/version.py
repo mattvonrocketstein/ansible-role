@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-""" ansible_role_apply.version
+""" ansible_role.version
 
 """
 

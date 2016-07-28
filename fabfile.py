@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# fabfile for ansible_role_apply
+# fabfile for ansible_role
 #
 # this file is a self-hosting fabfile, meaning it
 # supports direct invocation with standard option
@@ -25,11 +25,11 @@ _dirname = os.path.dirname
 
 ldir = _dirname(__file__)
 
-pkg_name = 'ansible_role_apply'
+pkg_name = 'ansible_role'
 
 
 VERSION_DELTA = .01
-pkg_name = 'ansible_role_apply'
+pkg_name = 'ansible_role'
 
 
 @api.task

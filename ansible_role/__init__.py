@@ -18,7 +18,7 @@ from fabric import api
 from fabric.colors import red, cyan
 
 from .base import report as base_report, eprint
-from ansible_role_apply.version import __version__
+from ansible_role.version import __version__
 
 JINJA_ENV = jinja2.Environment(
     undefined=jinja2.StrictUndefined)
@@ -36,11 +36,11 @@ PLAYBOOK_CONTENT = '\n'.join([
 ])
 
 report = lambda *args, **kargs: base_report(
-    'ansible-role-apply', *args, **kargs)
+    'ansible-role', *args, **kargs)
 
 
 def get_parser():
-    """ creates the parser for the ansible-role-apply command line utility """
+    """ creates the parser for the ansible-role command line utility """
     parser = ArgumentParser(prog=os.path.split(sys.argv[0])[-1])
     parser.add_argument(
         'rolename',

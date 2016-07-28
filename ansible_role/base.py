@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-""" ansible_role_apply.base
+""" ansible_role.base
 """
 from __future__ import print_function
 import sys

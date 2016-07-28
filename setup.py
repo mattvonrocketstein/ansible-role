@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-""" setup.py for ansible-role-apply
+""" setup.py for ansible-role
 """
 import os
 import sys
@@ -15,25 +15,25 @@ if not os.getcwd() == this_dir:
 # make sure we can import the version number so that it doesn't have
 # to be changed in two places. ymir/__init__.py is also free
 # to import various requirements that haven't been installed yet
-sys.path.append(os.path.join(this_dir, 'ansible_role_apply'))
+sys.path.append(os.path.join(this_dir, 'ansible_role'))
 from version import __version__  # flake8: noqa
 sys.path.pop()
 
 base_url = 'https://github.com/mattvonrocketstein/ansible-role-apply/'
 
 setup(
-    name='ansible-role-apply',
+    name='ansible-role',
     version=__version__,
     description='',
     author='mattvonrocketstein',
     author_email='$author@gmail',
     url=base_url,
     download_url=base_url + '/tarball/master',
-    packages=['ansible_role_apply'],
-    keywords=['ansible', 'devops'],
+    packages=['ansible_role'],
+    keywords=['ansible', 'role', 'devops'],
     entry_points={
         'console_scripts':
-        ['ansible-role-apply = ansible_role_apply:entry', ]},
+        ['ansible-role = ansible_role:entry', ]},
     install_requires=[
         'shellescape==3.4.1',
         "Fabric",
