@@ -14,13 +14,9 @@
 
 #
 import os
-
 from fabric import api
+from fabric import colors
 from fabric.contrib.console import confirm
-from fabric.colors import red
-
-VERSION_DELTA = .01
-pkg_name = 'ansible_role_apply'
 
 _ope = os.path.exists
 _mkdir = os.mkdir
@@ -28,6 +24,12 @@ _expanduser = os.path.expanduser
 _dirname = os.path.dirname
 
 ldir = _dirname(__file__)
+
+pkg_name = 'ansible_role_apply'
+
+
+VERSION_DELTA = .01
+pkg_name = 'ansible_role_apply'
 
 
 @api.task
@@ -48,10 +50,10 @@ def version_bump():
     new_file = version_file_contents[:-1] + \
         ["__version__={0}".format(new_version)]
     new_file = '\n'.join(new_file)
-    print red("warning:") + \
+    print colors.red("warning:") + \
         " version will be changed to {0}".format(new_version)
     print
-    print red("new version file will look like this:\n")
+    print colors.red("new version file will look like this:\n")
     print new_file
     ans = confirm('proceed with version change?')
     if not ans:
@@ -63,27 +65,35 @@ def version_bump():
 
 
 @api.task
-def pypi_repackage():
+def release():
+    """ releases the master branch at the current version to pypi """
     ldir = _dirname(__file__)
-    print red("warning:") + (" by now you should have commited local"
-                             " master and bumped version string")
+    print colors.red("warning:") + \
+        (" by now you should have commited local"
+         " master and bumped version string")
     ans = confirm('proceed with pypi update in "{0}"?'.format(ldir))
     if not ans:
         return
     with api.lcd(ldir):
+        # stash local changes if there are any
+        api.local("git stash")
+        current_branch = api.local('git rev-parse --abbrev-ref HEAD')
+        # warn-only, because if the branch already exists the command fails
         with api.settings(warn_only=True):
-            # in case this has never been done before
-            api.local("git checkout -b pypi")
+            tmp_checkout = api.local("git checkout -b pypi").succeeded
+        if tmp_checkout.failed:
+            api.local("git checkout pypi")
         api.local("git reset --hard master")
         api.local("python setup.py register -r pypi")
         api.local("python setup.py sdist upload -r pypi")
+        api.local('git checkout {0}'.format(current_branch))
 
 
 @api.task
 def vulture():
     with api.lcd(os.path.dirname(__file__)):
         api.local(
-            'vulture ansible_role_apply --exclude fabfile.py|grep -v _provision_|grep -v ansible_role_apply/checks.py')
+            'vulture {0} --exclude fabfile.py')
 
 if __name__ == '__main__':
     # a neat hack that makes this file a "self-hosting" fabfile,

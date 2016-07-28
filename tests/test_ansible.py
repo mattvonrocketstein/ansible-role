@@ -5,25 +5,19 @@
 import os
 import mock
 import pytest
+
 from fabric import api
+from argparse import ArgumentParser
 
 from .backports import TemporaryDirectory
-from ansible_role_apply.util import (
-    require_ansible_role,)
 from ansible_role_apply import (
-    role_apply, entry, report, get_parser)
-from argparse import ArgumentParser
+    role_apply, entry, report, get_parser,
+    require_ansible_role,)
 
 
 def test_get_parser():
     parser = get_parser()
     assert type(parser) == ArgumentParser
-
-
-@mock.patch("ansible_role_apply.util.apply_ansible_role")
-def test_entry(aar):
-    entry()
-    assert aar.called_once
 
 
 def test_require_ansible_role_good_val():
@@ -37,8 +31,10 @@ def test_require_ansible_role_good_val():
         fake.assert_called_with(cmd)
 
 
-@mock.patch("ansible_role_apply.util.apply_ansible_role")
+@mock.patch("ansible_role_apply.apply_ansible_role")
 def test_help(aar):
+    success, exit_code = True, 0
+    aar.return_value = success, exit_code
     with TemporaryDirectory() as tmp_dir:
         role_name = 'role.name'
         role_apply(role_name,

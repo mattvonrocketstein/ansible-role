@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-""" setup.py for ymir
+""" setup.py for ansible-role-apply
 """
 import os
 import sys
@@ -20,6 +20,7 @@ from version import __version__  # flake8: noqa
 sys.path.pop()
 
 base_url = 'https://github.com/mattvonrocketstein/ansible-role-apply/'
+
 setup(
     name='ansible-role-apply',
     version=__version__,
