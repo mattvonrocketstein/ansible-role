@@ -91,9 +91,21 @@ def release():
 
 @api.task
 def vulture():
+    """ try to find dead code paths """
+    with api.quiet():
+        if not api.local('which vulture').succeeded:
+            print 'vulture not found, installing it'
+            api.local('pip install vulture')
+    vulture_cmd = 'vulture {pkg_name} --exclude fabfile.py'
+    vulture_cmd = vulture_cmd.format(pkg_name=pkg_name)
     with api.lcd(os.path.dirname(__file__)):
-        api.local(
-            'vulture {0} --exclude fabfile.py')
+        with api.settings(warn_only=True):
+            with api.hide('everything'):
+                result = api.local(vulture_cmd, capture=True)
+                exit_code = result.return_code
+    print result
+    raise SystemExit(exit_code)
+
 
 if __name__ == '__main__':
     # a neat hack that makes this file a "self-hosting" fabfile,

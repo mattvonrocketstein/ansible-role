@@ -18,7 +18,7 @@ from fabric.colors import red, cyan
 from ansible_role.version import __version__
 from ansible_role.console import report as base_report
 
-FAIL = FAILURE = red('✖ ')
+FAIL = red('✖ ')
 SUCCESS = cyan('✓ ')
 
 report = lambda *args, **kargs: base_report(
