@@ -14,6 +14,7 @@
 
 #
 import os
+import sys
 from fabric import api
 from fabric import colors
 from fabric.contrib.console import confirm
@@ -65,22 +66,43 @@ def version_bump():
 
 
 @api.task
-def release():
+def release(force=False):
     """ releases the master branch at the current version to pypi """
+    with api.quiet():
+        cmd = 'git rev-parse --abbrev-ref HEAD'
+        current_branch = api.local(cmd, capture=True)
+    if not current_branch.succeeded:
+        err = "wait a minute, is this even a git repo?"
+        print colors.red("ERROR: ") + err
+        raise SystemExit(1)
+    if current_branch != 'master':
+        err = "you must do releases from master, but this is {0}"
+        print colors.red("ERROR:") + err.format(current_branch)
+        raise SystemExit(1)
     ldir = _dirname(__file__)
-    print colors.red("warning:") + \
-        (" by now you should have commited local"
-         " master and bumped version string")
-    ans = confirm('proceed with pypi update in "{0}"?'.format(ldir))
-    if not ans:
-        return
+    if not force:
+        print colors.red("WARNING:\n") + \
+            ("  did you commit local master?\n"
+             "  did you bump the version string?\n")
+        this_dir = os.path.dirname(os.path.abspath(__file__))
+        sys.path.append(os.path.join(this_dir, pkg_name))
+        from version import __version__ as release_version  # flake8: noqa
+        sys.path.pop()
+        release_version = str(release_version)
+        print colors.blue("current branch: ") + current_branch
+        print colors.blue("current version: ") + release_version
+        print colors.blue("current dir: ") + "{0}".format(ldir)
+        question = '\nproceed with pypi update?'
+        ans = confirm(colors.red(question))
+        if not ans:
+            raise SystemExit(1)
+
     with api.lcd(ldir):
         # stash local changes if there are any
         api.local("git stash")
-        current_branch = api.local('git rev-parse --abbrev-ref HEAD')
         # warn-only, because if the branch already exists the command fails
         with api.settings(warn_only=True):
-            tmp_checkout = api.local("git checkout -b pypi").succeeded
+            tmp_checkout = api.local("git checkout -b pypi")
         if tmp_checkout.failed:
             api.local("git checkout pypi")
         api.local("git reset --hard master")
