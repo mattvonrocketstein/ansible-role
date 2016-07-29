@@ -37,6 +37,5 @@ setup(
     install_requires=[
         'shellescape==3.4.1',
         "Fabric",
-        'jinja2',
     ],
 )
