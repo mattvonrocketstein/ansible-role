@@ -15,7 +15,13 @@ def test_ansible_role_gives_ansible_galaxy_return_value():
     assert exc.value.code == 1
 
 
+def test_ansible_role_help():
+    with pytest.raises(SystemExit) as exc:
+        entry(['--help', ])
+    assert exc.value.code == 0
+
+
 def test_ansible_role_gives_ansible_return_value():
     with pytest.raises(SystemExit) as exc:
-        entry(['geerlingguy.git', ])
+        entry(['geerlingguy.git', '--check'])
     assert exc.value.code == 0

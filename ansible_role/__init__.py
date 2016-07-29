@@ -46,7 +46,7 @@ def get_parser():
         prog=os.path.split(sys.argv[0])[-1],
         formatter_class=MyHelpFormatter,)
     parser.add_argument('rolename', type=str, nargs=1,)
-    parser.add_argument('host', type=str, default='localhost',)
+    parser.add_argument('host', type=str, nargs='?', default='localhost',)
     parser.add_argument('--module-path', '-M',)
     return parser
 
@@ -167,9 +167,6 @@ def entry(args=[]):
     report('version {0}'.format(__version__))
     parser = get_parser()
     prog_args, extra_ansible_args = parser.parse_known_args(args)
-    if prog_args.help:
-        print parser.usage
-        raise SystemExit(0)
     role_name = prog_args.rolename.pop()
     module_path = prog_args.module_path
     succes, code = role_apply(
