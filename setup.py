@@ -24,7 +24,12 @@ base_url = 'https://github.com/mattvonrocketstein/ansible-role-apply/'
 setup(
     name='ansible-role',
     version=__version__,
-    description='',
+    license='apache',
+    description='The missing "ansible-role" command',
+    long_description=(
+        'The missing "ansible-role" command, downloads, '
+        'installs, and cleans temporary ansible roles without '
+        'the need for manually editing ansible playbooks'),
     author='mattvonrocketstein',
     author_email='$author@gmail',
     url=base_url,
@@ -38,4 +43,19 @@ setup(
         'shellescape==3.4.1',
         "Fabric",
     ],
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Environment :: Console',
+        'Intended Audience :: Developers',
+        'Intended Audience :: System Administrators',
+        'License :: OSI Approved :: Apache Software License',
+        'Natural Language :: English',
+        'Operating System :: POSIX',
+        'Programming Language :: Python :: 2.7',
+        'Topic :: Software Development :: Bug Tracking',
+        'Topic :: System :: Installation/Setup',
+        'Topic :: System :: Systems Administration',
+        'Topic :: Utilities',
+    ],
+    zip_safe=False,
 )
