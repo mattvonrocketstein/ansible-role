@@ -1,17 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# fabfile for ansible_role
+# Fabfile for ansible_role
 #
-# this file is a self-hosting fabfile, meaning it
-# supports direct invocation with standard option
-# parsing, including --help and -l (for listing commands).
+# Summary of commands/arguments (you can also use `fab -l`):
 #
-# summary of commands/arguments:
-#
-#   * fab pypi_repackage: update this package on pypi
+#   * fab release: update this package on pypi
 #   * fab version_bump: bump the package version
-
+#   * fab vulture: look for dead code
 #
 import os
 import sys
@@ -24,20 +20,16 @@ _mkdir = os.mkdir
 _expanduser = os.path.expanduser
 _dirname = os.path.dirname
 
-ldir = _dirname(__file__)
-
-pkg_name = 'ansible_role'
-
-
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+PKG_NAME = 'ansible_role'
 VERSION_DELTA = .01
-pkg_name = 'ansible_role'
 
 
 @api.task
 def version_bump():
-    """ bump the version number for """ + pkg_name
+    """ bump the version number for """ + PKG_NAME
     sandbox = {}
-    version_file = os.path.join(pkg_name, 'version.py')
+    version_file = os.path.join(PKG_NAME, 'version.py')
     err = 'version file not found in expected location: ' + version_file
     assert os.path.exists(version_file), err
     # running "import pkg.version" should have no side-effects,
@@ -65,13 +57,24 @@ def version_bump():
         print 'version has been rewritten.'
 
 
+def get_pkg_version():
+    """ """
+    sys.path.append(os.path.join(THIS_DIR, PKG_NAME))
+    from version import __version__ as release_version  # flake8: noqa
+    sys.path.pop()
+    return release_version
+
+
 @api.task
 def release(force=False):
     """ releases the master branch at the current version to pypi """
+    current_version = get_pkg_version()
     with api.quiet():
         cmd = 'git rev-parse --abbrev-ref HEAD'
         current_branch = api.local(cmd, capture=True)
-    if not current_branch.succeeded:
+        cmd = 'git rev-parse HEAD'
+        current_hash = api.local(cmd, capture=True)
+    if not current_branch.succeeded or not current_hash.succeeded:
         err = "wait a minute, is this even a git repo?"
         print colors.red("ERROR: ") + err
         raise SystemExit(1)
@@ -79,25 +82,19 @@ def release(force=False):
         err = "you must do releases from master, but this is {0}"
         print colors.red("ERROR:") + err.format(current_branch)
         raise SystemExit(1)
-    ldir = _dirname(__file__)
     if not force:
         print colors.red("WARNING:\n") + \
             ("  did you commit local master?\n"
              "  did you bump the version string?\n")
-        this_dir = os.path.dirname(os.path.abspath(__file__))
-        sys.path.append(os.path.join(this_dir, pkg_name))
-        from version import __version__ as release_version  # flake8: noqa
-        sys.path.pop()
-        release_version = str(release_version)
         print colors.blue("current branch: ") + current_branch
-        print colors.blue("current version: ") + release_version
-        print colors.blue("current dir: ") + "{0}".format(ldir)
-        question = '\nproceed with pypi update?'
-        ans = confirm(colors.red(question))
-        if not ans:
-            raise SystemExit(1)
-
-    with api.lcd(ldir):
+        print colors.blue("current version: ") + str(current_version)
+        print colors.blue("current dir: ") + "{0}".format(THIS_DIR)
+        if not force:
+            question = '\nproceed with pypi update?'
+            ans = confirm(colors.red(question))
+            if not ans:
+                raise SystemExit(1)
+    with api.lcd(THIS_DIR):
         # stash local changes if there are any
         api.local("git stash")
         # warn-only, because if the branch already exists the command fails
@@ -106,9 +103,23 @@ def release(force=False):
         if tmp_checkout.failed:
             api.local("git checkout pypi")
         api.local("git reset --hard master")
+        # git tag -a v1.4 -m "my version 1.4"
         api.local("python setup.py register -r pypi")
         api.local("python setup.py sdist upload -r pypi")
+        print colors.red("release seems successful")
+        msg = "  hash {0} for branch {1} will be tagged as {2}"
+        print msg.format(colors.blue(current_hash),
+                         colors.blue(current_branch),
+                         colors.blue(current_version))
+        cmd = 'git tag -a "{0}" {1}'
+        api.local(cmd.format(current_version, current_hash))
         api.local('git checkout {0}'.format(current_branch))
+        with api.settings(warn_only=True):
+            api.local('git stash pop')
+
+import contextlib
+VULTURE_EXCLUDE_PATHS = []
+VULTURE_IGNORE_FUNCTIONS = ['format_help', 'entry']
 
 
 @api.task
@@ -118,14 +129,22 @@ def vulture():
         if not api.local('which vulture').succeeded:
             print 'vulture not found, installing it'
             api.local('pip install vulture')
-    vulture_cmd = 'vulture {pkg_name} --exclude fabfile.py'
-    vulture_cmd = vulture_cmd.format(pkg_name=pkg_name)
-    with api.lcd(os.path.dirname(__file__)):
-        with api.settings(warn_only=True):
-            with api.hide('everything'):
-                result = api.local(vulture_cmd, capture=True)
-                exit_code = result.return_code
-    print result
+    ignore_functions_grep = 'egrep -v "{0}"'.format(
+        '|'.join(VULTURE_IGNORE_FUNCTIONS))
+    excluded = ",".join(VULTURE_EXCLUDE_PATHS)
+    excluded_paths = (' --exclude ' + excluded) if excluded else ''
+    vulture_cmd = '\n  vulture {pkg_name}{exclude}{pipes}'
+    vulture_cmd = vulture_cmd.format(
+        pkg_name=PKG_NAME,
+        exclude=excluded_paths,
+        pipes='|'.join(['', ignore_functions_grep]))
+    changedir = api.lcd(os.path.dirname(__file__))
+    warn_only = api.settings(warn_only=True)
+    be_quit = api.hide('warnings')
+    with contextlib.nested(changedir, warn_only, be_quit):
+        result = api.local(vulture_cmd, capture=True)
+        exit_code = result.return_code
+    print result.strip()
     raise SystemExit(exit_code)
 
 

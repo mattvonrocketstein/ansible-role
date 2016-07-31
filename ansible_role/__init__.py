@@ -2,6 +2,9 @@
 """ ansible_role
     The missing "ansible-role" command,
     for applying a single role without editing a playbook.
+
+    see also:
+      https://mattvonrocketstein.github.io/heredoc/ansible-role.html
 """
 
 import os
@@ -118,8 +121,7 @@ def get_playbook_for_role(role_name, role_dir, report=base_report):
         To pass ansible variables through to the role, you can use kwargs
         to this function.
 
-        see also:
-          https://groups.google.com/forum/#!topic/ansible-project/h-SGLuPDRrs
+
     """
     def make_playbook_string(role_path):
         return '\n'.join([
@@ -132,8 +134,9 @@ def get_playbook_for_role(role_name, role_dir, report=base_report):
     return playbook_content
 
 
-def apply_ansible_role(role_name, role_dir, ansible_args='', report=base_report):
+def apply_ansible_role(role_name, role_dir, ansible_args='', report=None):
     """ """
+    report = report or base_report
     err = " should be a string!"
     assert isinstance(role_name, (basestring,)), "role_name" + err
     assert isinstance(role_dir, (basestring,)), "role_dir" + err
@@ -162,7 +165,7 @@ def apply_ansible_role(role_name, role_dir, ansible_args='', report=base_report)
 
 
 def entry(args=[]):
-    """ Main entry point """
+    """ Command-line entry point """
     args = args or sys.argv[1:]
     report('version {0}'.format(__version__))
     parser = get_parser()

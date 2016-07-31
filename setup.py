@@ -16,14 +16,14 @@ if not os.getcwd() == this_dir:
 # to be changed in two places. ymir/__init__.py is also free
 # to import various requirements that haven't been installed yet
 sys.path.append(os.path.join(this_dir, 'ansible_role'))
-from version import __version__  # flake8: noqa
+from version import __version__ as release_version  # flake8: noqa
 sys.path.pop()
 
 base_url = 'https://github.com/mattvonrocketstein/ansible-role-apply/'
 
 setup(
     name='ansible-role',
-    version=__version__,
+    version=release_version,
     license='apache',
     description='The missing "ansible-role" command',
     long_description=(
