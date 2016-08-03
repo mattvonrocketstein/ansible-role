@@ -8,6 +8,7 @@
 #   * fab release: update this package on pypi
 #   * fab version_bump: bump the package version
 #   * fab vulture: look for dead code
+#   * fab show_version: shows current pkg version
 #
 import os
 import sys
@@ -26,35 +27,35 @@ VERSION_DELTA = .01
 
 
 @api.task
-def version_bump():
+def version_bump(force=False):
     """ bump the version number for """ + PKG_NAME
     sandbox = {}
     version_file = os.path.join(PKG_NAME, 'version.py')
     err = 'version file not found in expected location: ' + version_file
     assert os.path.exists(version_file), err
     # running "import pkg.version" should have no side-effects,
-    # so there's little point in parsing the file.  just exec
+    # so there's little point in ASTing the file.  just exec it
     execfile(version_file, sandbox)
     current_version = sandbox['__version__']
     new_version = current_version + VERSION_DELTA
     with open(version_file, 'r') as fhandle:
-        version_file_contents = [x for x in fhandle.readlines()
-                                 if x.strip()]
+        version_file_contents = [
+            x for x in fhandle.readlines() if x.strip()]
     new_file = version_file_contents[:-1] + \
         ["__version__={0}".format(new_version)]
     new_file = '\n'.join(new_file)
-    print colors.red("warning:") + \
-        " version will be changed to {0}".format(new_version)
-    print
-    print colors.red("new version file will look like this:\n")
-    print new_file
-    ans = confirm('proceed with version change?')
-    if not ans:
-        print 'aborting.'
-        return
+    if not force:
+        print colors.red("warning:"),
+        print " version will be changed to {0}\n".format(new_version)
+        print colors.red("new version file will look like this:\n")
+        print new_file
+        ans = confirm('proceed with version change?')
+        if not ans:
+            print 'aborting.'
+            raise SystemExit(1)
     with open(version_file, 'w') as fhandle:
         fhandle.write(new_file)
-        print 'version has been rewritten.'
+        print 'version rewritten to {0}'.format(new_version)
 
 
 def get_pkg_version():
@@ -66,54 +67,81 @@ def get_pkg_version():
 
 
 @api.task
-def release(force=False):
-    """ releases the master branch at the current version to pypi """
-    current_version = get_pkg_version()
+def show_version():
+    """ show current version of this package """
+    print get_pkg_version()
+
+
+def git_branch():
+    """ returns (branch-name, hash) """
     with api.quiet():
         cmd = 'git rev-parse --abbrev-ref HEAD'
         current_branch = api.local(cmd, capture=True)
         cmd = 'git rev-parse HEAD'
         current_hash = api.local(cmd, capture=True)
-    if not current_branch.succeeded or not current_hash.succeeded:
-        err = "wait a minute, is this even a git repo?"
-        print colors.red("ERROR: ") + err
-        raise SystemExit(1)
-    if current_branch != 'master':
-        err = "you must do releases from master, but this is {0}"
-        print colors.red("ERROR:") + err.format(current_branch)
-        raise SystemExit(1)
-    if not force:
+    return current_hash, current_branch
+
+
+@api.task
+def release(force=False):
+    """ releases the master branch at the current version to pypi """
+    with api.lcd(THIS_DIR):
+        return _release(force=force)
+
+
+def _release(force=False):
+    """ """
+    def assert_master(branch_name):
+        if current_branch != 'master':
+            err = "you must do releases from master, but this is {0}"
+            print colors.red("ERROR:") + err.format(current_branch)
+            raise SystemExit(1)
+
+    def assert_git(hash, branch_name):
+        is_git_repo = all([current_branch.succeeded, current_hash.succeeded])
+        if not is_git_repo:
+            print colors.red("ERROR: ") + \
+                "wait a minute, is this even a git repo?"
+            raise SystemExit(1)
+
+    def assert_confirm():
         print colors.red("WARNING:\n") + \
             ("  did you commit local master?\n"
              "  did you bump the version string?\n")
-        print colors.blue("current branch: ") + current_branch
-        print colors.blue("current version: ") + str(current_version)
-        print colors.blue("current dir: ") + "{0}".format(THIS_DIR)
-        if not force:
-            question = '\nproceed with pypi update?'
-            ans = confirm(colors.red(question))
-            if not ans:
-                raise SystemExit(1)
-    with api.lcd(THIS_DIR):
-        # stash local changes if there are any
-        api.local("git stash")
-        # warn-only, because if the branch already exists the command fails
-        with api.settings(warn_only=True):
-            tmp_checkout = api.local("git checkout -b pypi")
-        if tmp_checkout.failed:
-            api.local("git checkout pypi")
-        api.local("git reset --hard master")
-        # git tag -a v1.4 -m "my version 1.4"
-        api.local("python setup.py register -r pypi")
-        api.local("python setup.py sdist upload -r pypi")
-        print colors.red("release seems successful")
-        msg = "  hash {0} for branch {1} will be tagged as {2}"
-        print msg.format(colors.blue(current_hash),
-                         colors.blue(current_branch),
-                         colors.blue(current_version))
-        cmd = 'git tag -a "{0}" {1}'
-        api.local(cmd.format(current_version, current_hash))
-        api.local('git checkout {0}'.format(current_branch))
+        question = '\nproceed with pypi update?'
+        ans = confirm(colors.red(question))
+        if not ans:
+            raise SystemExit(1)
+    current_version = get_pkg_version()
+    current_hash, current_branch = git_branch()
+    assert_git(current_hash, current_branch)
+    assert_master(current_branch)
+    print colors.blue("current branch: ") + current_branch
+    print colors.blue("current version: ") + str(current_version)
+    print colors.blue("current dir: ") + "{0}".format(THIS_DIR)
+    if not force:
+        assert_confirm()
+    result = api.local("git stash")  # stash local changes if there are any
+    stashed_changes = result.succeeded and str(
+        result) != 'No local changes to save'
+    # warn-only, because if the branch already exists the command fails
+    with api.settings(warn_only=True):
+        tmp_checkout = api.local("git checkout -b pypi")
+    if tmp_checkout.failed:
+        api.local("git checkout pypi")
+    api.local("git reset --hard master")
+    api.local("python setup.py register -r pypi")
+    api.local("python setup.py sdist upload -r pypi")
+    print colors.red("release successful")
+    print "  hash {0} for branch {1} will be tagged as {2}".format(
+        colors.blue(current_hash[:6]),
+        colors.blue(current_branch),
+        colors.blue(current_version))
+    cmd = 'git tag -a "{0}" {1} -m "version {0}"'
+    api.local(cmd.format(current_version, current_hash))
+    api.local("git push origin --tags")
+    api.local('git checkout {0}'.format(current_branch))
+    if stashed_changes:
         with api.settings(warn_only=True):
             api.local('git stash pop')
 

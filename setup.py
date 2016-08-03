@@ -27,7 +27,7 @@ setup(
     license='apache',
     description='The missing "ansible-role" command',
     long_description=(
-        'The missing "ansible-role" command, downloads, '
+        'The missing "ansible-role" command: downloads, '
         'installs, and cleans temporary ansible roles without '
         'the need for manually editing ansible playbooks'),
     author='mattvonrocketstein',
