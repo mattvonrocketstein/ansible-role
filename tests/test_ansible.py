@@ -46,4 +46,5 @@ def test_help(aar):
         role_name,
         os.path.join(tmp_dir, 'roles'),
         ansible_args=ansible_args,
+        hosts='localhost',
         report=report)

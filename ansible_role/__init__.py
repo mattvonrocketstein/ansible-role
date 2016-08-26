@@ -176,8 +176,8 @@ def entry(args=[]):
     prog_args, extra_ansible_args = parser.parse_known_args(args)
     role_name = prog_args.rolename.pop()
     succes, code = role_apply(
-        rolename=role_name,
-        host=prog_args.host,
+        role_name=role_name,
+        hosts=prog_args.host,
         module_path=prog_args.module_path,
         extra_ansible_args=extra_ansible_args)
     raise SystemExit(code)

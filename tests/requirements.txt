@@ -8,3 +8,4 @@ pytest-xdist
 mock
 unittest2
 vulture
+python-apt
