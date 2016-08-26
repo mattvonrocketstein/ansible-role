@@ -19,7 +19,7 @@ sys.path.append(os.path.join(this_dir, 'ansible_role'))
 from version import __version__ as release_version  # flake8: noqa
 sys.path.pop()
 
-base_url = 'https://github.com/mattvonrocketstein/ansible-role-apply/'
+base_url = 'https://github.com/mattvonrocketstein/ansible-role/'
 
 setup(
     name='ansible-role',
@@ -52,7 +52,6 @@ setup(
         'Natural Language :: English',
         'Operating System :: POSIX',
         'Programming Language :: Python :: 2.7',
-        'Topic :: Software Development :: Bug Tracking',
         'Topic :: System :: Installation/Setup',
         'Topic :: System :: Systems Administration',
         'Topic :: Utilities',
