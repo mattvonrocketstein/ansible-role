@@ -26,6 +26,7 @@ SUCCESS = cyan('✓ ')
 
 report = lambda *args, **kargs: base_report(
     'ansible-role', *args, **kargs)
+
 USAGE = (
     'Usage: ansible-role rolename.username [hostname]'
     ' [ansible-playbook args]\n\nThis command applies the given ansible '
@@ -38,16 +39,18 @@ USAGE = (
     'ALL OTHER OPTIONS will be passed on to ansible-playbook!\n\n')
 
 
+class HelpFormatter(argparse.HelpFormatter):
+    usage = USAGE
+
+    def format_help(self):
+        return self.usage
+
+
 def get_parser():
     """ creates the parser for the ansible-role command line utility """
-    class MyHelpFormatter(argparse.HelpFormatter):
-        usage = USAGE
-
-        def format_help(self):
-            return self.usage
     parser = argparse.ArgumentParser(
         prog=os.path.split(sys.argv[0])[-1],
-        formatter_class=MyHelpFormatter,)
+        formatter_class=HelpFormatter,)
     parser.add_argument('rolename', type=str, nargs=1,)
     parser.add_argument('host', type=str, nargs='?', default='localhost',)
     parser.add_argument('--module-path', '-M',)
@@ -71,7 +74,10 @@ def escape_args(extra_ansible_args):
     ]
 
 
-def role_apply(role_name='role.name', module_path=None, extra_ansible_args=[]):
+def role_apply(role_name='role.name',
+               hosts='localhost',
+               module_path=None,
+               extra_ansible_args=[]):
     """ """
     module_path_created = False
     if not module_path:
@@ -85,6 +91,7 @@ def role_apply(role_name='role.name', module_path=None, extra_ansible_args=[]):
     try:
         success, exit_code = apply_ansible_role(
             role_name, role_dir,
+            hosts=hosts,
             ansible_args=extra_ansible_args,
             report=report)
         if not success and module_path_created:
@@ -112,20 +119,16 @@ def require_ansible_role(role_name, role_dir, report=base_report):
     report(SUCCESS + msg)
 
 
-def get_playbook_for_role(role_name, role_dir, report=base_report):
+def get_playbook_for_role(
+        role_name, role_dir, hosts='localhost', report=base_report):
     """ this provisioner applies a single ansible role.  this is more
         complicated than it sounds because there's no way to do this
         without a playbook, and so a temporary playbook is created just
         for this purpose.
-
-        To pass ansible variables through to the role, you can use kwargs
-        to this function.
-
-
     """
     def make_playbook_string(role_path):
         return '\n'.join([
-            "- hosts: all",
+            "- hosts: " + hosts,
             "  roles:",
             "  - {role: " + role_path + "}",
         ])
@@ -134,14 +137,15 @@ def get_playbook_for_role(role_name, role_dir, report=base_report):
     return playbook_content
 
 
-def apply_ansible_role(role_name, role_dir, ansible_args='', report=None):
+def apply_ansible_role(
+        role_name, role_dir, hosts='localhost', ansible_args='', report=None):
     """ """
     report = report or base_report
     err = " should be a string!"
     assert isinstance(role_name, (basestring,)), "role_name" + err
     assert isinstance(role_dir, (basestring,)), "role_dir" + err
     playbook_content = get_playbook_for_role(
-        role_name, role_dir, report=report)
+        role_name, role_dir, hosts=hosts, report=report)
     require_ansible_role(role_name, role_dir, report=report)
     with NamedTemporaryFile() as tmpf:
         tmpf.write(playbook_content)
@@ -171,7 +175,9 @@ def entry(args=[]):
     parser = get_parser()
     prog_args, extra_ansible_args = parser.parse_known_args(args)
     role_name = prog_args.rolename.pop()
-    module_path = prog_args.module_path
     succes, code = role_apply(
-        role_name, module_path, extra_ansible_args)
+        rolename=role_name,
+        host=prog_args.host,
+        module_path=prog_args.module_path,
+        extra_ansible_args=extra_ansible_args)
     raise SystemExit(code)
